@@ -88,10 +88,41 @@ body {
     height: 100%
 }
 
-.submit{
-    font-family: 'Courier New', Courier, monospace;
+.room-title {
+  font-weight: 700;
+  margin-bottom: 10px;
 }
-.input{
-    font-family: 'Courier New', Courier, monospace;
-    font-size: small;
+
+.box {
+  height: 380px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #081018;
+  position: relative;
 }
+
+.scene {
+  position: absolute;
+  padding: 18px;
+  z-index: 1;
+  width: calc(100% - 24px);
+  height: calc(100% - 24px);
+  overflow: hidden;
+}
+
+
+.veil {
+  position: absolute;
+  inset: 12px;
+  z-index: 4;
+  pointer-events: none;
+  border-radius: 8px;
+  --spotlight: 85px;
+  background: radial-gradient(
+    circle at var(--mx, 50%) var(--my, 50%),
+    rgba(0,0,0,0) 0px,
+    rgba(0,0,0,0) calc(var(--spotlight) - 10px),
+    rgba(0,0,0,0.96) calc(var(--spotlight) + 30px)
+  );
+}
+
