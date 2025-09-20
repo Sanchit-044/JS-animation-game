@@ -145,15 +145,12 @@ function initRoom() {
     success.textContent = `Level ${currentlvl}: Use the spotlight to reveal items`;
   }
 
-  // === FIX: remove only .obj and .key (do NOT move veil) ===
   const oldItems = Array.from(scene.querySelectorAll('.obj, .key'));
   oldItems.forEach(el => el.remove());
 
-  // create objects; number increases each level
   const items = ['❤‍🔥','🤡','✈','👾','😻','💡','🧽','🔔','🎊','📀','🚀','🚖'];
   const totalobjects = baseobjects + (currentlvl - 1) * objectplu;
 
-  // safe placement helper (relative to scene)
   function reqelement(elem, pad = 20) {
     const sRect = scene.getBoundingClientRect();
     if (sRect.width === 0 || sRect.height === 0) {
@@ -176,20 +173,17 @@ function initRoom() {
     requestAnimationFrame(() => reqelement(obj, 24));
   }
 
-  // create the key
   const key = document.createElement('div');
   key.className = 'key';
   key.textContent = '🔑';
   scene.appendChild(key);
   requestAnimationFrame(() => reqelement(key, 36));
 
-  // helper: get spotlight radius from CSS var
   function totalradius() {
     const raw = getComputedStyle(veil).getPropertyValue('--spotlight') || `${basespotlight}px`;
     return parseFloat(raw);
   }
 
-  // check whether a point is inside spotlight (uses veil CSS vars)
   function insidelight(px, py) {
     const sRect = scene.getBoundingClientRect();
     const mx = parseFloat(getComputedStyle(veil).getPropertyValue('--mx')) || sRect.width / 2;
@@ -235,7 +229,6 @@ function initRoom() {
         if (feedbackele) feedbackele.textContent = `Level ${currentlvl} — good luck!`;
         setTimeout(() => initRoom(), 300);
       } else {
-        // all levels complete -> show total time (if started)
         let totalTimeText = '';
         if (starttime) {
           const totalTime = ((Date.now() - starttime) / 1000).toFixed(1);
