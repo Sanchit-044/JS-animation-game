@@ -19,6 +19,21 @@
                 <div class="hint">Click the button — it will move away. Reach it 6 times to enter.</div>
             </div>
         </section>
+        <section class="stage hidden" id="room">
+            <div class="room">
+                <div style="font-weight:700;margin-bottom:10px">The Room — find the red word and type it below</div>
+                <div class="box" id="box">
+                    <div class="scene" id="scene"></div>
+                    <div class="veil" id="veil"></div>
+                    <div class="success" id="success">Correct — you found it!</div>
+                </div>
+                <div class="controls">
+                    <input id="answer" class="input" placeholder="Type the red word here" autocomplete="off" />
+                    <button id="submit" class="submit">Submit</button>
+                    <div class="msg small" id="feedback">Find the red word in the room.</div>
+                </div>
+            </div>
+        </section>
     </div>
     <script src="script.js"></script>
 </body>
