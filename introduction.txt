@@ -1,0 +1,12 @@
+Good evening sir/ma'am,
+My name is Sanchit Bhardwaj of CSE branch. I am an aspiring Web Developer.
+I was born and brought up in Meerut. 
+
+SKILLS :-
+1. C++
+2. Node.js + express
+3. HTML, CSS, js
+
+HOBBIES :-
+1. I like to play basketball and video games.
+2. I also listen to music in my free time.
