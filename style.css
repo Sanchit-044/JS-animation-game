@@ -126,3 +126,40 @@ body {
   );
 }
 
+.obj {
+  position: absolute;
+  font-size: 40px;
+  color: #cfe7ff;
+  user-select: none;
+  transform-origin: center;
+  transition: transform .2s ease;
+  cursor: default;
+}
+.obj:hover { transform: translateY(-6px); }
+.key {
+  position: absolute;
+  z-index: 2;
+  font-size: 40px;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  transition: transform .2s ease, opacity .2s ease;
+  pointer-events: auto;
+}
+
+.key.clicked {
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.success {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  z-index: 6;
+  background: rgba(0, 0, 0);
+  color: #fff;
+  font-size: 20px;
+  display: none;
+  border-radius: 10px;
+}
+.success.show { display: grid; }

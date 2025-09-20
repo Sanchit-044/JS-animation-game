@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Vanilla Cubes</title>
+    <style>
+        :root {
+            --grid-size: 8;
+            --max-angle: 60deg;
+            /* used as fallback for CSS animations - actual angle from JS */
+            --cube-radius: 24px;
+            --face-color: #1a1a2e;
+            --face-border: 2px dashed #5227FF;
+            --ripple-color: #ff6b6b;
+            --ripple-speed: 1.5s;
+            --gap: 5%;
+            --scene-width: min(920px, 94vw);
+        }
+
+        /* Layout */
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            font-family: Inter, system-ui, monospace;
+            background: #050213;
+            color: #e8eefc;
+            padding: 18px;
+        }
+
+        .wrap {
+            width: var(--scene-width);
+            max-width: 100%;
+        }
+
+        .scene {
+            width: 100%;
+            aspect-ratio: 1/1;
+            display: grid;
+            grid-template-columns: repeat(var(--grid-size), 1fr);
+            gap: 8px;
+            perspective: 1200px;
+            position: relative;
+            user-select: none;
+        }
+
+        /* Each cube container keeps a 3D preserve-3d context */
+        .cube {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transform-style: preserve-3d;
+            transition: transform 700ms cubic-bezier(.2, .9, .2, 1);
+            will-change: transform;
+            --px: 0deg;
+            --py: 0deg;
+            /* dynamic tilt set by JS inline style */
+        }
+
+        /* faces common */
+        .face {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--face-color);
+            border: var(--face-border);
+            box-sizing: border-box;
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+            overflow: hidden;
+        }
+
+        /* Each face transform uses the cube size and radius. JS sets --rz and --size on each cube */
+        .face.front {
+            transform: translateZ(calc(var(--rz)));
+        }
+
+        .face.back {
+            transform: rotateY(180deg) translateZ(calc(var(--rz)));
+        }
+
+        .face.right {
+            transform: rotateY(90deg) translateZ(calc(var(--rz)));
+        }
+
+        .face.left {
+            transform: rotateY(-90deg) translateZ(calc(var(--rz)));
+        }
+
+        .face.top {
+            transform: rotateX(90deg) translateZ(calc(var(--rz)));
+        }
+
+        .face.bottom {
+            transform: rotateX(-90deg) translateZ(calc(var(--rz)));
+        }
+
+        /* subtle inner shadow and texture */
+        .face::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.01), transparent 30%);
+            pointer-events: none;
+        }
+
+        /* ripple overlay (appears on click) */
+        .ripple {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            mix-blend-mode: screen;
+            opacity: 0;
+            transition: opacity .18s ease;
+        }
+
+        .ripple.show {
+            opacity: 1;
+            animation: ripplePulse var(--ripple-speed) ease-out;
+        }
+
+        @keyframes ripplePulse {
+            0% {
+                transform: scale(0.2);
+                opacity: 0.95;
+                filter: blur(0);
+            }
+
+            60% {
+                transform: scale(1.1);
+                opacity: 0.45;
+                filter: blur(2px);
+            }
+
+            100% {
+                transform: scale(1.5);
+                opacity: 0;
+                filter: blur(6px);
+            }
+        }
+
+        /* small active pop for clicked cubes */
+        .cube.clicked {
+            transform: translateZ(6px) scale(1.02) rotateX(var(--px)) rotateY(var(--py));
+            transition: transform 320ms cubic-bezier(.2, .9, .2, 1);
+        }
+
+        /* make cubes responsive: they are squares through grid and aspect-ratio in parent */
+        @media (max-width: 720px) {
+            :root {
+                --grid-size: 6;
+            }
+        }
+
+        /* helper small explanatory UI */
+        .info {
+            margin-top: 12px;
+            font-size: 13px;
+            color: #cfe7ff;
+            opacity: 0.9;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .info span {
+            opacity: 0.8;
+            font-size: 12px;
+            background: rgba(255, 255, 255, 0.02);
+            padding: 6px 8px;
+            border-radius: 8px
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="wrap">
+        <div id="scene" class="scene" aria-hidden="false"></div>
+        <div class="info" id="info">
+            <span id="cfg">grid: 8 × 8</span>
+            <span>Click any cube to trigger ripple</span>
+        </div>
+    </div>
+
+    <script>
+        /* ---------- Configuration (like props) ---------- */
+        const config = {
+            gridSize: 8,
+            maxAngle: 60,             // degrees
+            radius: 4,                // px depth multiplier (will be scaled by cube size)
+            borderStyle: "2px dashed #5227FF",
+            faceColor: "#1a1a2e",
+            rippleColor: "#ff6b6b",
+            rippleSpeed: 1.5,         // seconds
+            autoAnimate: true,
+            rippleOnClick: true
+        };
+
+        /* ---------- Utility ---------- */
+        function cssVar(name, value) { document.documentElement.style.setProperty(name, value); }
+
+        /* Apply some root CSS vars so user can tune globally if needed */
+        cssVar('--grid-size', config.gridSize);
+        cssVar('--face-color', config.faceColor);
+        cssVar('--face-border', config.borderStyle);
+        cssVar('--ripple-speed', config.rippleSpeed + 's');
+
+        /* ---------- Build grid ---------- */
+        const scene = document.getElementById('scene');
+        scene.style.gridTemplateColumns = `repeat(${config.gridSize}, 1fr)`;
+        document.getElementById('cfg').textContent = `grid: ${config.gridSize} × ${config.gridSize}`;
+
+        /* Create cubes */
+        const cubes = [];
+
+        function makeCube(index) {
+            const cube = document.createElement('div');
+            cube.className = 'cube';
+            // each cube needs a size-aware translateZ (we set later once layout measured)
+            // faces
+            const faces = ['front', 'back', 'left', 'right', 'top', 'bottom'];
+            for (const f of faces) {
+                const face = document.createElement('div');
+                face.className = 'face face--' + f + ' face-' + f;
+                face.dataset.face = f;
+                cube.appendChild(face);
+            }
+            // ripple overlay (for color pulse)
+            const ripple = document.createElement('div');
+            ripple.className = 'ripple';
+            ripple.style.background = `radial-gradient(circle at 50% 50%, ${config.rippleColor} 0%, rgba(255,255,255,0) 40%)`;
+            cube.appendChild(ripple);
+
+            // store ref
+            cubes.push({ node: cube, ripple });
+            return cube;
+        }
+
+        function buildGrid() {
+            scene.innerHTML = '';
+            cubes.length = 0;
+            const total = config.gridSize * config.gridSize;
+            for (let i = 0; i < total; i++) {
+                const c = makeCube(i);
+                scene.appendChild(c);
+            }
+            // after DOM attached, size cubes
+            requestAnimationFrame(resizeAllCubes);
+        }
+
+        /* ---------- sizing: compute translateZ from cube size and configured radius ---------- */
+        function resizeAllCubes() {
+            const cubeEl = scene.querySelector('.cube');
+            if (!cubeEl) return;
+            // computed cube pixel size from grid cell
+            const cell = cubeEl.getBoundingClientRect();
+            const size = Math.min(cell.width, cell.height);
+            // compute translateZ: multiply 'radius' by a fraction of size so depth scales
+            const rz = Math.max(6, Math.floor(size * (config.radius / 24))); // scale factor tuned experimentally
+            // set each cube's CSS variable for --rz (translateZ)
+            for (const { node } of cubes) {
+                node.style.setProperty('--rz', rz + 'px');
+                // initialize rotation variables (px / py) inline so CSS uses them
+                node.style.setProperty('--px', '0deg');
+                node.style.setProperty('--py', '0deg');
+                // initial transform (no tilt)
+                node.style.transform = `rotateX(0deg) rotateY(0deg)`;
+            }
+        }
+
+        /* ---------- interactions: ripple on click and per-cube animation ---------- */
+        function playRippleAt(index) {
+            // ripple effect radiates from clicked cube — animate cubes with delay by distance
+            const cx = Math.floor(index / config.gridSize);
+            const cy = index % config.gridSize;
+            const centerNode = cubes[index].node;
+            const centerRect = centerNode.getBoundingClientRect();
+
+            cubes.forEach((entry, i) => {
+                const r = entry.node.getBoundingClientRect();
+                // compute grid coords of this cube
+                const ix = Math.floor(i / config.gridSize);
+                const iy = i % config.gridSize;
+                const dist = Math.hypot(ix - cx, iy - cy);
+                const delay = dist * 60; // ms per grid distance
+                setTimeout(() => {
+                    triggerSingleCubeAnimation(entry.node, entry.ripple);
+                }, delay);
+            });
+        }
+
+        function triggerSingleCubeAnimation(node, rippleEl) {
+            // choose a random tilt within range
+            const angleX = (Math.random() - 0.5) * config.maxAngle * 0.5; // milder X
+            const angleY = (Math.random() - 0.5) * config.maxAngle;
+            node.style.setProperty('--px', angleX + 'deg');
+            node.style.setProperty('--py', angleY + 'deg');
+            node.classList.add('clicked');
+            // show colored ripple overlay
+            if (config.rippleOnClick) {
+                rippleEl.classList.remove('show'); // reset
+                void rippleEl.offsetWidth;
+                rippleEl.style.animationDuration = config.rippleSpeed + 's';
+                rippleEl.classList.add('show');
+                // remove ripple show after animation
+                setTimeout(() => rippleEl.classList.remove('show'), config.rippleSpeed * 1000 + 80);
+            }
+            // settle back after short time
+            setTimeout(() => {
+                node.classList.remove('clicked');
+                node.style.setProperty('--px', '0deg');
+                node.style.setProperty('--py', '0deg');
+                node.style.transform = `rotateX(0deg) rotateY(0deg)`;
+            }, 420 + Math.random() * 220);
+        }
+
+        /* ---------- attach click handler on scene to detect clicked cube ---------- */
+        scene.addEventListener('pointerdown', (ev) => {
+            const targetCube = ev.target.closest('.cube');
+            if (!targetCube) return;
+            const index = Array.prototype.indexOf.call(scene.children, targetCube);
+            if (index < 0) return;
+            if (config.rippleOnClick) playRippleAt(index);
+            else triggerSingleCubeAnimation(cubes[index].node, cubes[index].ripple);
+        });
+
+        /* ---------- optional autoAnimate: randomly nudge cubes periodically ---------- */
+        let autoAnimTimer = null;
+        function startAutoAnimate() {
+            if (!config.autoAnimate) return;
+            stopAutoAnimate();
+            autoAnimTimer = setInterval(() => {
+                // pick a random cube and nudge it
+                const i = Math.floor(Math.random() * cubes.length);
+                if (cubes[i]) triggerSingleCubeAnimation(cubes[i].node, cubes[i].ripple);
+            }, 800 + Math.random() * 900);
+        }
+        function stopAutoAnimate() {
+            if (autoAnimTimer) { clearInterval(autoAnimTimer); autoAnimTimer = null; }
+        }
+
+        /* ---------- initialization ---------- */
+        buildGrid();
+        startAutoAnimate();
+        window.addEventListener('resize', () => { resizeAllCubes(); });
+
+        /* expose config for debugging in console */
+        window._CUBES = { config, rebuild: () => { buildGrid(); startAutoAnimate(); } };
+
+    </script>
+</body>
+
+</html>
